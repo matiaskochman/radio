@@ -29,12 +29,18 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
+import javax.json.JsonString;
+import javax.management.RuntimeErrorException;
 
 public class Main {
 
+	public static final String url1 = "http://cdn-gs.radiocut.com.ar/metro951/";
+	public static final String url2 = "http://storage.googleapis.com/radiocut/metro951/";
+	public static final String url3 = "http://cdn-gs-rg.radiocut.com.ar/metro951/";
+	
 	public static void main(String[] args){
-		for (int i = 2; i <= 30; i++) {
-			LocalDate date = LocalDate.of(2016, Month.NOVEMBER, i);
+		for (int i = 18; i <= 28; i++) {
+			LocalDate date = LocalDate.of(2017, Month.FEBRUARY, i);
 			
 			downloadBastaDeTodoForSpecificDate(date);
 			
@@ -55,6 +61,9 @@ public class Main {
 			ZonedDateTime zoneFinish = finish.atZone(ZoneId.of("GMT"));
 			Long toTimeInMillis = zoneFinish.toInstant().toEpochMilli();		
 			
+			// le agrego 2 minutos (120000 milisegundos) mas al final 
+			toTimeInMillis += 120000;
+			
 			System.out.println(toTimeInMillis);
 			String startmilis = fromTimeInMillis.toString();
 			
@@ -63,7 +72,7 @@ public class Main {
 			
 			boolean finished = false;
 			
-			List<String> urlList = new ArrayList<String>();
+			List<String> suburl_List = new ArrayList<String>();
 			List<Integer> timeList = new ArrayList<Integer>();
 			while(!finished){
 				String url = "http://chunkserver.radiocut.fm//server/get_chunks/metro951/"+ chunkNumber+"/";
@@ -78,13 +87,15 @@ public class Main {
 	            JsonObject empObj = reader.readObject();			
 	            JsonObject query = empObj.getJsonObject(chunkNumber.toString());
 	            JsonArray chunks = query.getJsonArray("chunks");
-	            
+	            JsonString baseUrl= query.getJsonString("baseURL");
 	            
 	            Integer intTimeInSeconds = null;
 	            for (int i = 0; i < chunks.size(); i++) {
 					JsonObject o = chunks.getJsonObject(i);
 					String filename = o.getJsonString("filename").toString().replaceAll("\"", "");
-					String s = "http://cdn-gs.radiocut.com.ar/metro951/"+chunkNumber.toString().substring(0,3)+"/"+chunkNumber.toString().substring(3,6)+"/"+filename;
+					String urlbase = baseUrl.toString().replaceAll("\"", "");
+					//String s = chunkNumber.toString().substring(0,3)+"/"+chunkNumber.toString().substring(3,6)+"/"+filename;
+					String s = urlbase+"/"+filename;
 					String time = filename.substring(0, 10);
 					intTimeInSeconds = new Integer(time);
 					
@@ -92,7 +103,7 @@ public class Main {
 						
 						//agarrar uno antes que se cumpla la consigna
 						
-						urlList.add(s);
+						suburl_List.add(s);
 						timeList.add(intTimeInSeconds);
 					}
 					if((toTimeInMillis/1000)<intTimeInSeconds){
@@ -110,14 +121,22 @@ public class Main {
 			
 			
 			List<String> fileNameList = new LinkedList<String>();
-            for (String urlString : urlList) {
+            for (String urlString : suburl_List) {
             	Pattern pattern = Pattern.compile("1(\\d|\\.|\\-)*.mp3");
             	Matcher matcher = pattern.matcher(urlString);
             	String filename = null;
             	if(matcher.find()){
             		filename = urlString.substring(matcher.start(), matcher.end());
-            		download(urlString,filename);
-            		fileNameList.add(filename);
+            		try{
+            			//download(url1+urlString,filename);
+            			download(urlString,filename);
+            			fileNameList.add(filename);
+            		}catch(RuntimeException e){
+            			System.out.println("not reachable: "+urlString);
+            			System.out.println(e.getMessage());
+            			continue;
+            			
+            		}
             	}
 			}
             
@@ -140,11 +159,18 @@ public class Main {
 	    //StringBuffer text = new StringBuffer();
 	    StringBuilder sb = new StringBuilder();
 	    
+		
 		conn.setRequestMethod("GET");
 		conn.setRequestProperty("Accept", "text/html");
+		//conn.setRequestProperty("Accept-Encoding","gzip, deflate, sdch");
+		conn.setRequestProperty("Accept-Language","en-US,en;q=0.8,es;q=0.6");
+		conn.setRequestProperty("Connection","keep-alive");
+		conn.setRequestProperty("Host","chunkserver.radiocut.fm");
+		conn.setRequestProperty("User-Agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.95 Safari/537.36");
 		
-		if (conn.getResponseCode() != 200) {
-			throw new Exception("Failed : HTTP error code : "
+		
+		if (conn.getResponseCode() < 200 ||conn.getResponseCode() >= 300) {
+			throw new RuntimeException("Failed : HTTP error code : "
 					+ conn.getResponseCode());
 		}
 		
@@ -162,9 +188,9 @@ public class Main {
 	    return sb.toString();
 	}
 	
-	public static void download(String url,String filename){
+	public static void download(String url,String filename) throws IOException{
 
-		try {
+
 			HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
 			conn.setConnectTimeout(30000);
 			conn.setReadTimeout(120000);
@@ -173,25 +199,27 @@ public class Main {
 			
 			conn.setRequestMethod("GET");
 			conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+			//conn.setRequestProperty("Upgrade-Insecure-Requests", "1");
 			conn.setRequestProperty("Accept-Encoding","gzip, deflate, sdch");
 			conn.setRequestProperty("Accept-Language","en-US,en;q=0.8,es;q=0.6");
 			conn.setRequestProperty("Connection","keep-alive");
 			conn.setRequestProperty("Host","cdn-gs.radiocut.com.ar");
+			//conn.setRequestProperty("Host", "storage.googleapis.com");
 			conn.setRequestProperty("User-Agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.95 Safari/537.36");
 			
-			if (conn.getResponseCode() < 200 ||conn.getResponseCode() >= 300) {
-				throw new Exception("Failed : HTTP error code : "
+			if (conn.getResponseCode() < 200 ||conn.getResponseCode() >= 400) {
+				throw new RuntimeException("Failed : HTTP error code : "
 						+ conn.getResponseCode());
 			}
 			
 			InputStream is = conn.getInputStream();
 			System.out.println(filename);
-			OutputStream outstream = new FileOutputStream(new File("/Users/matiaskochman/recordings/basta/"+filename));
-			byte[] buffer = new byte[4096];
+			OutputStream outstream = new FileOutputStream(new File("/Users/matiaskochman/recordings/basta/2017/"+filename));
+			byte[] buffer = new byte[2048];
 			int len;
 			int count = 0;
 			while ((len = is.read(buffer)) > 0) {
-				if(count == 20){
+				if(count == 35){
 					System.out.println(len);
 					count = 0;
 				}
@@ -199,14 +227,8 @@ public class Main {
 				count++;
 			}
 			outstream.close();		
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
-	}
+
 	
 	public static void executeCommands(List<String> listaArchivos, LocalDate date) throws IOException {
 
@@ -242,7 +264,7 @@ public class Main {
 	    PrintWriter printWriter = new PrintWriter(streamWriter);
 
 	    printWriter.println("#!/bin/bash");
-	    printWriter.println("cd /Users/matiaskochman/recordings/basta");
+	    printWriter.println("cd /Users/matiaskochman/recordings/basta/2017");
 	    printWriter.println(sb.toString());
 	    printWriter.println("ls");
 
