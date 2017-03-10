@@ -37,11 +37,14 @@ public class Main {
 	public static final String url1 = "http://cdn-gs.radiocut.com.ar/metro951/";
 	public static final String url2 = "http://storage.googleapis.com/radiocut/metro951/";
 	public static final String url3 = "http://cdn-gs-rg.radiocut.com.ar/metro951/";
+	public static final String pattern_host_url = "(?<=http\\:\\/\\/)[^\\/]+(?=\\/)";
+	static Pattern host_pattern = null;
 	
 	public static void main(String[] args){
-		for (int i = 18; i <= 28; i++) {
+		for (int i = 20; i <= 28; i++) {
 			LocalDate date = LocalDate.of(2017, Month.FEBRUARY, i);
-			
+			host_pattern = Pattern.compile(pattern_host_url);
+
 			downloadBastaDeTodoForSpecificDate(date);
 			
 		}		
@@ -195,6 +198,11 @@ public class Main {
 			conn.setConnectTimeout(30000);
 			conn.setReadTimeout(120000);
 			
+			  Matcher m = host_pattern.matcher(url);
+			  String host = null;
+			  if (m.find( )) {
+				  host = url.substring(m.start(),m.end());
+			  }
 
 			
 			conn.setRequestMethod("GET");
@@ -203,7 +211,7 @@ public class Main {
 			conn.setRequestProperty("Accept-Encoding","gzip, deflate, sdch");
 			conn.setRequestProperty("Accept-Language","en-US,en;q=0.8,es;q=0.6");
 			conn.setRequestProperty("Connection","keep-alive");
-			conn.setRequestProperty("Host","cdn-gs.radiocut.com.ar");
+			conn.setRequestProperty("Host",host);
 			//conn.setRequestProperty("Host", "storage.googleapis.com");
 			conn.setRequestProperty("User-Agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.95 Safari/537.36");
 			
