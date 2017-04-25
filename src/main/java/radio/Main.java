@@ -30,7 +30,6 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 import javax.json.JsonString;
-import javax.management.RuntimeErrorException;
 
 public class Main {
 
@@ -38,11 +37,13 @@ public class Main {
 	public static final String url2 = "http://storage.googleapis.com/radiocut/metro951/";
 	public static final String url3 = "http://cdn-gs-rg.radiocut.com.ar/metro951/";
 	public static final String pattern_host_url = "(?<=http\\:\\/\\/)[^\\/]+(?=\\/)";
+	static final int diferenciaGMT = 3;
+	
 	static Pattern host_pattern = null;
 	
 	public static void main(String[] args){
-		for (int i = 20; i <= 28; i++) {
-			LocalDate date = LocalDate.of(2017, Month.FEBRUARY, i);
+		for (int i = 17; i <= 24; i++) {
+			LocalDate date = LocalDate.of(2017, Month.APRIL, i);
 			host_pattern = Pattern.compile(pattern_host_url);
 
 			downloadBastaDeTodoForSpecificDate(date);
@@ -51,15 +52,18 @@ public class Main {
 	}
 	public static void downloadBastaDeTodoForSpecificDate(LocalDate date){
 		try {
-			// tengo que poner 17 horas porque son 14 horas + 3 horas de diferencia con gmt
-			LocalDateTime start = LocalDateTime.of(date.getYear(), date.getMonth(), date.getDayOfMonth(),17,0);
+			// tengo que poner 16 horas porque son 13 horas + 3 horas de diferencia con gmt
+			
+			int horaBuenosAiresInicio = 13 + diferenciaGMT;
+			LocalDateTime start = LocalDateTime.of(date.getYear(), date.getMonth(), date.getDayOfMonth(),horaBuenosAiresInicio,0);
 			
 			ZonedDateTime zoneStart = start.atZone(ZoneId.of("GMT"));
 			Long fromTimeInMillis = zoneStart.toInstant().toEpochMilli();
 			System.out.println(fromTimeInMillis);
 			
-			// tengo que poner 17 horas porque son 14 horas + 3 horas de diferencia con gmt
-			LocalDateTime finish = LocalDateTime.of(date.getYear(), date.getMonth(), date.getDayOfMonth(),21,0);
+			// tengo que poner 20 horas porque son 17 horas + 3 horas de diferencia con gmt
+			int horaBuenosAiresFin = 17 + diferenciaGMT;
+			LocalDateTime finish = LocalDateTime.of(date.getYear(), date.getMonth(), date.getDayOfMonth(),horaBuenosAiresFin,0);
 			
 			ZonedDateTime zoneFinish = finish.atZone(ZoneId.of("GMT"));
 			Long toTimeInMillis = zoneFinish.toInstant().toEpochMilli();		
